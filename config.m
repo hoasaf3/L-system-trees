@@ -10,7 +10,7 @@ function conf = config(index)
     conf_a.iters = 10;
 
     conf_b.alpha1 = 27;
-    conf_b.alpha2 = -78;
+    conf_b.alpha2 = -68;
     conf_b.r1 = .65;
     conf_b.r2 = .71;
     conf_b.w0 = 20;

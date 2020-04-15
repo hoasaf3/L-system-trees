@@ -7,67 +7,86 @@ fprintf('*************************************** \n');
 
 while true
     choice = input('Choose an option (a-i): ', 's');
-    p = input('Choose mutation rate (0-100):', 's');
-    p = str2double(p);
-    
     conf=config(double(choice)-double('a')+1);
-    axiom = [80, conf.w0];
-
-    loc = [0; 0];
-
+    
     figure(1)
     close all;
-    iterate(conf, 1, pi/2, loc, axiom(1), axiom(2), p, 0);
+
+    string = [create_axiom(conf)];
+    
+    i = 1;
+    while i<conf.iters
+        string = iterate_string(string, conf);
+        i = i +1;
+        
+        draw_string(string);
+        pause(1);
+    end
     
     fprintf('************************ \n');
     fprintf('\n** Do you want more? ** \n');
-    fprintf('************************ \n')
+    fprintf('************************ \n');
 end    
 
-
-% i=1;
-% iters = conf.iters;
-% while i<iters
-%     conf.iters = i;
-%     %close 1;
-%     iterate(conf, 1, pi/2, loc, axiom(1), axiom(2));
-%     i = i + 1;
-%     pause(0.5);
-% end
-
-function [v] = calc_next(loc, angle, length)
-    v= [loc(1)+length*cos(angle); loc(2) + length*sin(angle)];
+function [v] = calc_end(start, direction, length)
+    v = [start(1)+length*cos(direction); start(2) + length*sin(direction)];
 end
 
-function iterate(c, it, d, loc, s, w, p, mut)
-    
-    if it>c.iters
-        return;
-    end
-    
-    if s<c.min
-        return;
-    end
-    
-    color = [0 1-0.65^it 1];
-    
-    if mut
-        color = [1, 0.8^mut, 0];
-    else  
-        if rand*100 < p
-            mut=1;
-            color = [1, 1, 0];
+function [axiom] = create_axiom(conf)
+    axiom.type = 'A';
+    axiom.s = 80;
+    axiom.w = conf.w0;
+    axiom.d = pi/2;
+    axiom.line_start = [0; 0];
+    axiom.line_end = calc_end(axiom.line_start, axiom.d, axiom.s);
+    axiom.depth = 1;
+end
+
+function [left] = create_left(v, c)
+    left.type = 'A';
+    left.line_start = v.line_end;
+    left.d = v.d + pi * c.alpha1/180;
+    left.s = v.s * c.r1;
+    left.line_end = calc_end(left.line_start, left.d, left.s);
+    left.w = v.w* c.q^c.e;
+    left.depth = v.depth + 1;
+end
+
+function [right] = create_right(v, c)
+    right.type = 'A';
+    right.line_start = v.line_end;
+    right.d = v.d + pi * c.alpha2/180;
+    right.s = v.s * c.r2;
+    right.line_end = calc_end(right.line_start, right.d, right.s);
+    right.w = v.w * (1-c.q)^c.e;
+    right.depth = v.depth + 1;
+end
+
+function new_string = iterate_string(string, c)
+    i=1;
+    while i<=length(string)
+        v=string(i);
+        if strcmp(v.type, 'A') % extend           
+            
+            if v.s < c.min
+                break;
+            end
+           
+            string(i).type = 'F';  % update real string, not v
+            string = [string(1:i) create_left(v,c) create_right(v,c) string(i+1:end)];
+            i = i + 3;
+        else
+            i = i + 1;
         end
     end
     
-    next_loc = calc_next(loc, d, s);
-    line([loc(1), next_loc(1)],[loc(2), next_loc(2)],'color',color, 'linewidth', w);
-    loc = next_loc;
-    
-    if mut > 2^2
-        return;
+    new_string = string;
+end
+
+function draw_string(string)
+    for v=string
+        line([v.line_start(1), v.line_end(1)], ...
+             [v.line_start(2), v.line_end(2)], ...
+             'color', [0 1-0.65^v.depth 1], 'linewidth', v.w);
     end
-    
-    iterate(c, it+1, d + pi * c.alpha1/180, loc, s*c.r1, w*c.q^c.e, p, mut*2);
-    iterate(c, it+1, d + pi * c.alpha2/180, loc, s*c.r2, w*(1-c.q)^c.e, p, mut*2);
 end
